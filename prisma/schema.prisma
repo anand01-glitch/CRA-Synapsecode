@@ -1,0 +1,167 @@
+// Prisma Schema for AI Code Review SaaS with Organizational Learning
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                  String               @id @default(cuid())
+  name                String
+  slug                String               @unique
+  similarityThreshold Float                @default(0.75)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  users               User[]
+  repositories        Repository[]
+  pullRequests        PullRequest[]
+  issues              Issue[]
+  teamRules           TeamRule[]
+  installations       GitHubInstallation[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  name           String
+  avatarUrl      String?
+  role           String       @default("DEVELOPER") // "ADMIN" | "DEVELOPER"
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+}
+
+model Repository {
+  id             String       @id @default(cuid())
+  githubId       Int?
+  name           String
+  fullName       String
+  defaultBranch  String       @default("main")
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pullRequests   PullRequest[]
+  issues         Issue[]
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+}
+
+model PullRequest {
+  id             String       @id @default(cuid())
+  githubPrNumber Int
+  title          String
+  description    String?
+  author         String
+  branch         String
+  baseBranch     String       @default("main")
+  status         String       @default("open") // "open" | "merged" | "closed"
+  reviewStatus   String       @default("PENDING") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
+  riskLevel      String       @default("low") // "low" | "medium" | "high" | "critical"
+  repositoryId   String
+  repository     Repository   @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  reviews        Review[]
+  issues         Issue[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([createdAt])
+  @@index([organizationId])
+  @@index([repositoryId])
+}
+
+model Review {
+  id            String      @id @default(cuid())
+  pullRequestId String
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  summary       String
+  riskLevel     String      @default("low") // "low" | "medium" | "high" | "critical"
+  status        String      @default("COMPLETED") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
+  errorMessage  String?
+  tokensUsed    Int         @default(0)
+  rawResponse   String?
+  issues        Issue[]
+  createdAt     DateTime    @default(now())
+
+  @@index([pullRequestId])
+}
+
+model Issue {
+  id                   String            @id @default(cuid())
+  reviewId             String?
+  review               Review?           @relation(fields: [reviewId], references: [id], onDelete: SetNull)
+  organizationId       String
+  organization         Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  repositoryId         String
+  repository           Repository        @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  pullRequestId        String
+  pullRequest          PullRequest       @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  category             String            // "security" | "performance" | "code_quality" | "testing"
+  severity             String            // "critical" | "high" | "medium" | "low"
+  filePath             String
+  lineStart            Int
+  lineEnd              Int
+  title                String
+  explanation          String
+  recommendation       String
+  codeSnippet          String
+  confidence           Float             @default(0.9)
+  embedding            String            // Serialized JSON array of float vector embeddings
+  createdAt            DateTime          @default(now())
+  sourceSimilarities   IssueSimilarity[] @relation("SourceIssue")
+  matchedSimilarities  IssueSimilarity[] @relation("MatchedIssue")
+
+  @@index([createdAt])
+  @@index([organizationId])
+  @@index([repositoryId])
+  @@index([pullRequestId])
+  @@index([category])
+}
+
+model IssueSimilarity {
+  id             String   @id @default(cuid())
+  sourceIssueId  String
+  sourceIssue    Issue    @relation("SourceIssue", fields: [sourceIssueId], references: [id], onDelete: Cascade)
+  matchedIssueId String
+  matchedIssue   Issue    @relation("MatchedIssue", fields: [matchedIssueId], references: [id], onDelete: Cascade)
+  score          Float
+  createdAt      DateTime @default(now())
+
+  @@index([sourceIssueId])
+  @@index([matchedIssueId])
+}
+
+model TeamRule {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  category        String       // "security" | "performance" | "code_quality" | "testing"
+  severity        String       // "critical" | "high" | "medium" | "low"
+  ruleDescription String
+  recommendation  String
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+
+  @@index([organizationId])
+}
+
+model GitHubInstallation {
+  id                   String       @id @default(cuid())
+  organizationId       String
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  installationId       String
+  targetType           String       @default("User")
+  accountName          String
+  encryptedAccessToken String?
+  createdAt            DateTime     @default(now())
+
+  @@index([organizationId])
+}
