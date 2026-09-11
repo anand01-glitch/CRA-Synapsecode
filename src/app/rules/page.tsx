@@ -17,10 +17,15 @@ export default async function TeamRulesPage({ searchParams }: TeamRulesPageProps
   const { currentOrg } = await getServerOrg(searchParams.org);
   const organizationId = currentOrg.id;
 
-  const rules = await db.teamRule.findMany({
-    where: { organizationId },
-    orderBy: { createdAt: 'asc' },
-  });
+  let rules: any[] = [];
+  try {
+    rules = await db.teamRule.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'asc' },
+    });
+  } catch (err) {
+    console.error('Error fetching rules:', err);
+  }
 
   const formattedRules: RuleItem[] = rules.map((r) => ({
     id: r.id,

@@ -30,42 +30,47 @@ export default async function TeamKnowledgePage({ searchParams }: KnowledgePageP
   const activeCategory = searchParams.category || 'all';
 
   // Query issues grouped by title and category strictly for this organization
-  const issues = await db.issue.findMany({
-    where: {
-      organizationId,
-      ...(activeCategory !== 'all' ? { category: activeCategory } : {}),
-    },
-    include: {
-      pullRequest: {
-        select: {
-          id: true,
-          githubPrNumber: true,
-          title: true,
-          createdAt: true,
-        },
+  let issues: any[] = [];
+  try {
+    issues = await db.issue.findMany({
+      where: {
+        organizationId,
+        ...(activeCategory !== 'all' ? { category: activeCategory } : {}),
       },
-      repository: {
-        select: {
-          name: true,
+      include: {
+        pullRequest: {
+          select: {
+            id: true,
+            githubPrNumber: true,
+            title: true,
+            createdAt: true,
+          },
         },
-      },
-      sourceSimilarities: {
-        include: {
-          matchedIssue: {
-            include: {
-              pullRequest: {
-                select: {
-                  id: true,
-                  githubPrNumber: true,
+        repository: {
+          select: {
+            name: true,
+          },
+        },
+        sourceSimilarities: {
+          include: {
+            matchedIssue: {
+              include: {
+                pullRequest: {
+                  select: {
+                    id: true,
+                    githubPrNumber: true,
+                  },
                 },
               },
             },
           },
         },
       },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch (err) {
+    console.error('Error fetching knowledge issues:', err);
+  }
 
   // Group issues into recurring patterns
   const patternMap = new Map<string, {

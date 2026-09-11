@@ -24,26 +24,31 @@ export default async function RepositoriesPage({ searchParams }: RepositoriesPro
   const { currentOrg } = await getServerOrg(searchParams.org);
   const organizationId = currentOrg.id;
 
-  const repositories = await db.repository.findMany({
-    where: { organizationId },
-    include: {
-      pullRequests: {
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        select: { reviewStatus: true, riskLevel: true, createdAt: true },
-      },
-      _count: {
-        select: {
-          pullRequests: true,
-          issues: true,
+  let repositories: any[] = [];
+  try {
+    repositories = await db.repository.findMany({
+      where: { organizationId },
+      include: {
+        pullRequests: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { reviewStatus: true, riskLevel: true, createdAt: true },
+        },
+        _count: {
+          select: {
+            pullRequests: true,
+            issues: true,
+          },
+        },
+        issues: {
+          where: { category: 'security' },
+          select: { id: true, severity: true },
         },
       },
-      issues: {
-        where: { category: 'security' },
-        select: { id: true, severity: true },
-      },
-    },
-  });
+    });
+  } catch (err) {
+    console.error('Error fetching repositories:', err);
+  }
 
   // Repository language mappings based on demo names
   const repoLanguages: Record<string, string> = {

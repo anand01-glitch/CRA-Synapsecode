@@ -28,65 +28,100 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
   const { currentOrg } = await getServerOrg(searchParams.org);
   const organizationId = currentOrg.id;
 
-  // 1. Fetch Aggregated Metrics strictly scoped to organizationId
-  const [
-    totalPrsCount,
-    totalIssuesCount,
-    securityIssuesCount,
-    similaritiesCount,
-    recentPrs,
-    issuesGroupedByCategory,
-    issuesGroupedBySeverity,
-    allIssuesOverTime,
-    repositoriesWithStats,
-  ] = await Promise.all([
-    db.pullRequest.count({ where: { organizationId } }),
-    db.issue.count({ where: { organizationId } }),
-    db.issue.count({ where: { organizationId, category: 'security' } }),
-    db.issueSimilarity.count({
+  // 1. Fetch Aggregated Metrics strictly scoped to organizationId with safe error handling
+  let totalPrsCount = 0;
+  let totalIssuesCount = 0;
+  let securityIssuesCount = 0;
+  let similaritiesCount = 0;
+  let recentPrs: any[] = [];
+  let issuesGroupedByCategory: any[] = [];
+  let issuesGroupedBySeverity: any[] = [];
+  let allIssuesOverTime: any[] = [];
+  let repositoriesWithStats: any[] = [];
+  let recurringIssues: any[] = [];
+
+  try {
+    const results = await Promise.all([
+      db.pullRequest.count({ where: { organizationId } }),
+      db.issue.count({ where: { organizationId } }),
+      db.issue.count({ where: { organizationId, category: 'security' } }),
+      db.issueSimilarity.count({
+        where: {
+          sourceIssue: { organizationId },
+        },
+      }),
+      db.pullRequest.findMany({
+        where: { organizationId },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        include: {
+          repository: { select: { name: true } },
+          issues: { select: { id: true, severity: true, category: true } },
+        },
+      }),
+      db.issue.groupBy({
+        by: ['category'],
+        where: { organizationId },
+        _count: { id: true },
+      }),
+      db.issue.groupBy({
+        by: ['severity'],
+        where: { organizationId },
+        _count: { id: true },
+      }),
+      db.issue.findMany({
+        where: { organizationId },
+        select: { createdAt: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+      db.repository.findMany({
+        where: { organizationId },
+        include: {
+          pullRequests: { select: { id: true, riskLevel: true } },
+          issues: { select: { id: true, severity: true } },
+        },
+      }),
+    ]);
+
+    totalPrsCount = results[0];
+    totalIssuesCount = results[1];
+    securityIssuesCount = results[2];
+    similaritiesCount = results[3];
+    recentPrs = results[4];
+    issuesGroupedByCategory = results[5];
+    issuesGroupedBySeverity = results[6];
+    allIssuesOverTime = results[7];
+    repositoriesWithStats = results[8];
+
+    recurringIssues = await db.issue.findMany({
       where: {
-        sourceIssue: { organizationId },
+        organizationId,
+        sourceSimilarities: { some: {} },
       },
-    }),
-    db.pullRequest.findMany({
-      where: { organizationId },
-      orderBy: { createdAt: 'desc' },
-      take: 6,
       include: {
+        pullRequest: { select: { id: true, githubPrNumber: true, title: true } },
         repository: { select: { name: true } },
-        issues: { select: { id: true, severity: true, category: true } },
+        sourceSimilarities: {
+          include: {
+            matchedIssue: {
+              include: {
+                pullRequest: { select: { githubPrNumber: true } },
+              },
+            },
+          },
+        },
       },
-    }),
-    db.issue.groupBy({
-      by: ['category'],
-      where: { organizationId },
-      _count: { id: true },
-    }),
-    db.issue.groupBy({
-      by: ['severity'],
-      where: { organizationId },
-      _count: { id: true },
-    }),
-    db.issue.findMany({
-      where: { organizationId },
-      select: { createdAt: true },
-      orderBy: { createdAt: 'asc' },
-    }),
-    db.repository.findMany({
-      where: { organizationId },
-      include: {
-        pullRequests: { select: { id: true, riskLevel: true } },
-        issues: { select: { id: true, severity: true } },
-      },
-    }),
-  ]);
+    });
+  } catch (err) {
+    console.error('Database query error on dashboard:', err);
+  }
 
   // Format category chart data
   const categoryData = [
-    { name: 'Security', count: issuesGroupedByCategory.find((c) => c.category === 'security')?._count.id || 0 },
-    { name: 'Performance', count: issuesGroupedByCategory.find((c) => c.category === 'performance')?._count.id || 0 },
-    { name: 'Code Quality', count: issuesGroupedByCategory.find((c) => c.category === 'code_quality')?._count.id || 0 },
-    { name: 'Testing', count: issuesGroupedByCategory.find((c) => c.category === 'testing')?._count.id || 0 },
+    { name: 'Security', count: issuesGroupedByCategory.find((c: any) => c.category === 'security')?._count.id || 0 },
+    { name: 'Performance', count: issuesGroupedByCategory.find((c: any) => c.category === 'performance')?._count.id || 0 },
+    { name: 'Code Quality', count: issuesGroupedByCategory.find((c: any) => c.category === 'code_quality')?._count.id || 0 },
+    { name: 'Testing', count: issuesGroupedByCategory.find((c: any) => c.category === 'testing')?._count.id || 0 },
   ];
 
   // Format time series data (group by date string)
@@ -122,30 +157,9 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
 
   const severityData = ['critical', 'high', 'medium', 'low'].map((sev) => ({
     name: sev,
-    value: issuesGroupedBySeverity.find((s) => s.severity === sev)?._count.id || 0,
+    value: issuesGroupedBySeverity.find((s: any) => s.severity === sev)?._count.id || 0,
     color: severityColors[sev],
   }));
-
-  // Top Recurring Issues: Group issues by title to find recurrence
-  const recurringIssues = await db.issue.findMany({
-    where: {
-      organizationId,
-      sourceSimilarities: { some: {} },
-    },
-    include: {
-      pullRequest: { select: { id: true, githubPrNumber: true, title: true } },
-      repository: { select: { name: true } },
-      sourceSimilarities: {
-        include: {
-          matchedIssue: {
-            include: {
-              pullRequest: { select: { githubPrNumber: true } },
-            },
-          },
-        },
-      },
-    },
-  });
 
   return (
     <AppShell>
@@ -343,7 +357,7 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
                       </div>
                       <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
                         Linked: PR #{rec.pullRequest.githubPrNumber} &larr;{' '}
-                        {rec.sourceSimilarities.map((s) => `#${s.matchedIssue.pullRequest.githubPrNumber}`).join(', ')}
+                        {rec.sourceSimilarities.map((s: any) => `#${s.matchedIssue.pullRequest.githubPrNumber}`).join(', ')}
                       </div>
                     </div>
                   ))
@@ -363,9 +377,9 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
               </div>
 
               <div className="space-y-3">
-                {repositoriesWithStats.map((repo) => {
+                {repositoriesWithStats.map((repo: any) => {
                   const highRiskCount = repo.pullRequests.filter(
-                    (p) => p.riskLevel === 'high' || p.riskLevel === 'critical'
+                    (p: any) => p.riskLevel === 'high' || p.riskLevel === 'critical'
                   ).length;
                   const totalIssues = repo.issues.length;
 

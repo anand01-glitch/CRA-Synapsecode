@@ -28,19 +28,30 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const { currentOrg } = await getServerOrg(searchParams.org);
   const organizationId = currentOrg.id;
 
-  const [users, repos, installations] = await Promise.all([
-    db.user.findMany({
-      where: { organizationId },
-      orderBy: { createdAt: 'asc' },
-    }),
-    db.repository.findMany({
-      where: { organizationId },
-      orderBy: { name: 'asc' },
-    }),
-    db.gitHubInstallation.findMany({
-      where: { organizationId },
-    }),
-  ]);
+  let users: any[] = [];
+  let repos: any[] = [];
+  let installations: any[] = [];
+
+  try {
+    const results = await Promise.all([
+      db.user.findMany({
+        where: { organizationId },
+        orderBy: { createdAt: 'asc' },
+      }),
+      db.repository.findMany({
+        where: { organizationId },
+        orderBy: { name: 'asc' },
+      }),
+      db.gitHubInstallation.findMany({
+        where: { organizationId },
+      }),
+    ]);
+    users = results[0];
+    repos = results[1];
+    installations = results[2];
+  } catch (err) {
+    console.error('Error fetching settings:', err);
+  }
 
   return (
     <AppShell>

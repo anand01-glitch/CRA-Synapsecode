@@ -19,29 +19,34 @@ export default async function PullRequestsPage({ searchParams }: PullRequestsPag
   const organizationId = currentOrg.id;
 
   // Query PRs strictly scoped by organizationId
-  const prs = await db.pullRequest.findMany({
-    where: { organizationId },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      repository: { select: { name: true } },
-      issues: {
-        select: {
-          id: true,
-          category: true,
-          severity: true,
-          sourceSimilarities: { select: { id: true } },
+  let prs: any[] = [];
+  try {
+    prs = await db.pullRequest.findMany({
+      where: { organizationId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        repository: { select: { name: true } },
+        issues: {
+          select: {
+            id: true,
+            category: true,
+            severity: true,
+            sourceSimilarities: { select: { id: true } },
+          },
         },
       },
-    },
-  });
+    });
+  } catch (err) {
+    console.error('Error fetching PRs:', err);
+  }
 
   // Extract unique repositories for filtering
-  const repositories = Array.from(new Set(prs.map((p) => p.repository.name)));
+  const repositories = Array.from(new Set(prs.map((p: any) => p.repository?.name || 'unknown')));
 
   // Format PR data for client table
   const formattedPRs: PRItem[] = prs.map((pr) => {
-    const similaritiesCount = pr.issues.reduce(
-      (acc, curr) => acc + curr.sourceSimilarities.length,
+    const similaritiesCount = (pr.issues || []).reduce(
+      (acc: number, curr: any) => acc + (curr.sourceSimilarities?.length || 0),
       0
     );
 
@@ -53,11 +58,11 @@ export default async function PullRequestsPage({ searchParams }: PullRequestsPag
       status: pr.status,
       reviewStatus: pr.reviewStatus,
       riskLevel: pr.riskLevel,
-      createdAt: pr.createdAt.toISOString(),
+      createdAt: pr.createdAt ? new Date(pr.createdAt).toISOString() : new Date().toISOString(),
       repository: {
-        name: pr.repository.name,
+        name: pr.repository?.name || 'unknown',
       },
-      issues: pr.issues.map((i) => ({
+      issues: (pr.issues || []).map((i: any) => ({
         id: i.id,
         category: i.category,
         severity: i.severity,
