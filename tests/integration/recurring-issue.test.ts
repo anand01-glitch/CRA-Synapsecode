@@ -18,15 +18,29 @@ describe('Integration Test: Recurring Issue Detection & Organizational Isolation
   let pr301Id: string;
 
   beforeAll(async () => {
-    // Clean up any previous test records
-    await db.issueSimilarity.deleteMany({});
-    await db.issue.deleteMany({});
-    await db.review.deleteMany({});
-    await db.pullRequest.deleteMany({});
-    await db.repository.deleteMany({});
-    await db.teamRule.deleteMany({});
-    await db.user.deleteMany({});
-    await db.organization.deleteMany({});
+    // Clean up only test org records to preserve seeded demo data
+    const existingTestOrgs = await db.organization.findMany({
+      where: { slug: { in: ['acme-test-org', 'stark-test-org'] } },
+      select: { id: true },
+    });
+    const testOrgIds = existingTestOrgs.map((o) => o.id);
+    if (testOrgIds.length > 0) {
+      await db.issueSimilarity.deleteMany({
+        where: {
+          OR: [
+            { sourceIssue: { organizationId: { in: testOrgIds } } },
+            { matchedIssue: { organizationId: { in: testOrgIds } } },
+          ],
+        },
+      });
+      await db.issue.deleteMany({ where: { organizationId: { in: testOrgIds } } });
+      await db.review.deleteMany({ where: { pullRequest: { organizationId: { in: testOrgIds } } } });
+      await db.pullRequest.deleteMany({ where: { organizationId: { in: testOrgIds } } });
+      await db.repository.deleteMany({ where: { organizationId: { in: testOrgIds } } });
+      await db.teamRule.deleteMany({ where: { organizationId: { in: testOrgIds } } });
+      await db.user.deleteMany({ where: { organizationId: { in: testOrgIds } } });
+      await db.organization.deleteMany({ where: { id: { in: testOrgIds } } });
+    }
 
     // 1. Create Organization A (Acme)
     const orgA = await db.organization.create({
