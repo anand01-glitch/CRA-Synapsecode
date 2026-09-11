@@ -5,6 +5,7 @@ dist
 build
 .env.local
 *.db
+!prisma/dev.db
 *.db-journal
 *.log
 .DS_Store
