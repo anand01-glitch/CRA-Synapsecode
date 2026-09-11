@@ -8,31 +8,47 @@ import {
   User,
   Check,
   Zap,
+  Menu,
 } from 'lucide-react';
 import { useOrg } from '../../lib/context/org-context';
 import { ThemeToggle } from './theme-toggle';
 
-export function Header() {
+interface HeaderProps {
+  onToggleMobileMenu?: () => void;
+}
+
+export function Header({ onToggleMobileMenu }: HeaderProps) {
   const { currentOrg, availableOrgs, switchOrg, currentUser, switchRole } = useOrg();
   const [showOrgMenu, setShowOrgMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
-    <header className="h-16 border-b border-border bg-card/60 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-20">
-      {/* Left: Quick Context */}
-      <div className="flex items-center gap-4">
+    <header className="h-16 border-b border-border bg-card/60 backdrop-blur-xl px-3 sm:px-6 flex items-center justify-between sticky top-0 z-20">
+      {/* Left: Hamburger & Org Switcher */}
+      <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+        {/* Mobile Hamburger Menu Button */}
+        {onToggleMobileMenu && (
+          <button
+            onClick={onToggleMobileMenu}
+            className="md:hidden p-2 rounded-xl border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors shrink-0"
+            aria-label="Open navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Organization Switcher Dropdown */}
-        <div className="relative">
+        <div className="relative shrink min-w-0">
           <button
             onClick={() => {
               setShowOrgMenu(!showOrgMenu);
               setShowUserMenu(false);
             }}
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-border bg-muted/40 hover:bg-muted text-sm font-semibold transition-colors shadow-sm"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl border border-border bg-muted/40 hover:bg-muted text-xs sm:text-sm font-semibold transition-colors shadow-sm"
           >
-            <Building2 className="w-4 h-4 text-primary" />
-            <span className="truncate max-w-[140px] md:max-w-[200px]">{currentOrg.name}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+            <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary shrink-0" />
+            <span className="truncate max-w-[110px] sm:max-w-[160px] md:max-w-[200px]">{currentOrg.name}</span>
+            <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-muted-foreground shrink-0" />
           </button>
 
           {showOrgMenu && (
@@ -71,29 +87,29 @@ export function Header() {
         </div>
 
         {/* Demo Mode Badge */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-medium">
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-medium shrink-0">
           <Zap className="w-3 h-3" />
-          <span>Demo Mode Active</span>
+          <span>Demo Mode</span>
         </div>
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         {/* Role Switcher Pill */}
         <div className="flex items-center bg-muted/60 p-0.5 rounded-xl border border-border text-xs">
           <button
             onClick={() => switchRole('DEVELOPER')}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+            className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-medium transition-all ${
               currentUser.role === 'DEVELOPER'
                 ? 'bg-card text-foreground shadow-sm font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Developer
+            Dev
           </button>
           <button
             onClick={() => switchRole('ADMIN')}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+            className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-medium transition-all ${
               currentUser.role === 'ADMIN'
                 ? 'bg-primary text-primary-foreground shadow-sm font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
@@ -113,14 +129,14 @@ export function Header() {
               setShowUserMenu(!showUserMenu);
               setShowOrgMenu(false);
             }}
-            className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-muted/70 transition-colors"
+            className="flex items-center gap-2 p-1 rounded-xl hover:bg-muted/70 transition-colors"
           >
             <img
               src={currentUser.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
               alt={currentUser.name}
-              className="w-8 h-8 rounded-lg object-cover border border-border"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover border border-border"
             />
-            <div className="hidden md:block text-left">
+            <div className="hidden xl:block text-left">
               <div className="text-xs font-semibold leading-tight text-foreground">{currentUser.name}</div>
               <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                 {currentUser.role === 'ADMIN' ? (
@@ -137,7 +153,7 @@ export function Header() {
             <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-card border border-border shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
               <div className="p-3 border-b border-border/60">
                 <div className="font-semibold text-xs text-foreground">{currentUser.name}</div>
-                <div className="text-[11px] text-muted-foreground">{currentUser.email}</div>
+                <div className="text-[11px] text-muted-foreground truncate">{currentUser.email}</div>
                 <div className="mt-1.5 inline-block text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
                   {currentUser.role}
                 </div>

@@ -13,10 +13,16 @@ import {
   BrainCircuit,
   Sparkles,
   ChevronRight,
+  X,
 } from 'lucide-react';
 import { useOrg } from '../../lib/context/org-context';
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { currentOrg } = useOrg();
 
@@ -60,29 +66,44 @@ export function Sidebar() {
     },
   ];
 
-  return (
-    <aside className="w-64 border-r border-border bg-card/60 backdrop-blur-xl flex flex-col h-screen sticky top-0 z-30 select-none">
+  const sidebarContent = (
+    <div className="flex flex-col h-full select-none">
       {/* Brand Header */}
-      <div className="p-5 border-b border-border/70 flex items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-200">
+      <div className="p-4 sm:p-5 border-b border-border/70 flex items-center justify-between">
+        <Link
+          href="/dashboard"
+          onClick={onClose}
+          className="flex items-center gap-3 group"
+        >
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform duration-200">
             <BrainCircuit className="w-5 h-5" />
           </div>
           <div>
-            <div className="font-bold text-base tracking-tight leading-tight flex items-center gap-1.5">
+            <div className="font-bold text-sm sm:text-base tracking-tight leading-tight flex items-center gap-1.5">
               <span>SynapseCode</span>
               <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                 AI
               </span>
             </div>
-            <div className="text-xs text-muted-foreground">Org Learning Reviewer</div>
+            <div className="text-[11px] text-muted-foreground">Org Learning Reviewer</div>
           </div>
         </Link>
+
+        {/* Close button for mobile drawer */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="md:hidden p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Org Badge Pill */}
-      <div className="px-4 py-3 bg-muted/30 border-b border-border/50">
-        <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+      <div className="px-4 py-2.5 bg-muted/30 border-b border-border/50">
+        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">
           Active Workspace
         </div>
         <div className="flex items-center justify-between">
@@ -94,8 +115,8 @@ export function Sidebar() {
       </div>
 
       {/* Nav List */}
-      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
-        <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
           Platform
         </div>
         {navItems.map((item) => {
@@ -106,7 +127,8 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+              onClick={onClose}
+              className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-150 ${
                 isActive
                   ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/70'
@@ -150,6 +172,31 @@ export function Sidebar() {
           </span>
         </div>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Sticky Sidebar */}
+      <aside className="hidden md:flex w-64 border-r border-border bg-card/60 backdrop-blur-xl flex-col h-screen sticky top-0 z-30 select-none">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Drawer (Slide-over) */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
+
+          {/* Drawer content */}
+          <div className="relative w-72 max-w-[80vw] bg-card border-r border-border shadow-2xl flex flex-col h-full z-10 animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

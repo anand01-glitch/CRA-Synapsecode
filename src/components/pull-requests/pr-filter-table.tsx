@@ -94,14 +94,14 @@ export function PRFilterTable({
         </div>
 
         {/* Dropdown Filters */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full md:w-auto">
           {/* Repo Filter */}
           <select
             value={selectedRepo}
             onChange={(e) => setSelectedRepo(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-muted/40 border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground"
+            className="w-full sm:w-auto px-3 py-2 rounded-xl bg-muted/40 border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground"
           >
-            <option value="all">All Repositories</option>
+            <option value="all">All Repos</option>
             {repositories.map((repo) => (
               <option key={repo} value={repo}>
                 {repo}
@@ -113,9 +113,9 @@ export function PRFilterTable({
           <select
             value={selectedRisk}
             onChange={(e) => setSelectedRisk(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-muted/40 border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground"
+            className="w-full sm:w-auto px-3 py-2 rounded-xl bg-muted/40 border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground"
           >
-            <option value="all">All Risk Levels</option>
+            <option value="all">All Risks</option>
             <option value="critical">Critical</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
@@ -126,7 +126,7 @@ export function PRFilterTable({
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-muted/40 border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground"
+            className="w-full sm:w-auto px-3 py-2 rounded-xl bg-muted/40 border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground"
           >
             <option value="all">All Categories</option>
             <option value="security">Security</option>
@@ -139,9 +139,9 @@ export function PRFilterTable({
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-muted/40 border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground"
+            className="w-full sm:w-auto px-3 py-2 rounded-xl bg-muted/40 border border-border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground"
           >
-            <option value="all">All Review States</option>
+            <option value="all">All States</option>
             <option value="COMPLETED">Completed</option>
             <option value="PROCESSING">Processing</option>
             <option value="FAILED">Failed</option>
